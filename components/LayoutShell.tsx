@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useWeb3 } from '@/lib/web3'
@@ -27,6 +27,19 @@ function Brand() {
 export function LayoutShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const { address, connect, disconnect, isConnecting, chainId } = useWeb3()
+  
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const activeItem = navItems.find(item => item.href === pathname) || navItems[0]
   const shortAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : ''
@@ -87,14 +100,31 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
                 <GitBranch className="size-3.5" /> {shortAddress}
               </button>
             )}
-            <button 
-              onClick={address ? disconnect : connect} 
-              disabled={isConnecting}
-              className={`flex items-center gap-2 rounded-lg px-3.5 py-2 text-xs font-semibold transition ${address ? 'bg-white/[0.05] text-white hover:bg-white/10' : 'bg-[#d9f85a] text-[#0b0e13] hover:bg-[#c2e04d]'}`}
-            >
-              {isConnecting ? <div className="size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" /> : <Wallet className="size-3.5" />}
-              {address ? 'Connected' : (isConnecting ? 'Connecting...' : 'Connect wallet')}
-            </button>
+            <div className="relative" ref={dropdownRef}>
+              <button 
+                onClick={address ? () => setDropdownOpen(!dropdownOpen) : connect} 
+                disabled={isConnecting}
+                className={`flex items-center gap-2 rounded-lg px-3.5 py-2 text-xs font-semibold transition ${address ? 'bg-white/[0.05] text-white hover:bg-white/10' : 'bg-[#d9f85a] text-[#0b0e13] hover:bg-[#c2e04d]'}`}
+              >
+                {isConnecting ? <div className="size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" /> : <Wallet className="size-3.5" />}
+                {address ? 'Connected' : (isConnecting ? 'Connecting...' : 'Connect wallet')}
+              </button>
+
+              {dropdownOpen && address && (
+                <div className="absolute right-0 mt-2 w-48 rounded-xl border border-white/10 bg-[#161a22] shadow-xl py-1.5 z-50 overflow-hidden">
+                  <div className="px-4 py-2.5 border-b border-white/[0.05] mb-1 bg-[#10141b]">
+                    <p className="text-[10px] text-white/40 uppercase tracking-[0.1em] mb-1">Wallet Address</p>
+                    <p className="text-xs font-mono text-white/80">{shortAddress}</p>
+                  </div>
+                  <button 
+                    onClick={() => { disconnect(); setDropdownOpen(false); }}
+                    className="w-full text-left px-4 py-2.5 text-xs font-medium text-red-400 hover:bg-white/5 transition-colors"
+                  >
+                    Disconnect Wallet
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 
